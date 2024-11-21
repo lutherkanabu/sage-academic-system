@@ -1,5 +1,12 @@
 package com.example.application.data;
 
 public enum Role {
-    USER, ADMIN;
+    ROLE_STUDENT,
+    ROLE_LECTURER,
+    ROLE_ADMIN;
+
+    @Override
+    public String toString() {
+        return name();
+    }
 }

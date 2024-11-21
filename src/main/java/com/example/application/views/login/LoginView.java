@@ -1,46 +1,60 @@
 package com.example.application.views.login;
 
 import com.example.application.security.AuthenticatedUser;
-import com.vaadin.flow.component.login.LoginI18n;
-import com.vaadin.flow.component.login.LoginOverlay;
+import com.example.application.views.registration.RegistrationView;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.login.LoginForm;
+import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.internal.RouteUtil;
-import com.vaadin.flow.server.VaadinService;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 @AnonymousAllowed
 @PageTitle("Login")
 @Route(value = "login")
-public class LoginView extends LoginOverlay implements BeforeEnterObserver {
+public class LoginView extends VerticalLayout implements BeforeEnterObserver {
 
+    private final LoginForm login = new LoginForm();
     private final AuthenticatedUser authenticatedUser;
 
     public LoginView(AuthenticatedUser authenticatedUser) {
         this.authenticatedUser = authenticatedUser;
-        setAction(RouteUtil.getRoutePath(VaadinService.getCurrent().getContext(), getClass()));
+        
+        addClassName("login-view");
+        setSizeFull();
+        setAlignItems(Alignment.CENTER);
+        setJustifyContentMode(JustifyContentMode.CENTER);
 
-        LoginI18n i18n = LoginI18n.createDefault();
-        i18n.setHeader(new LoginI18n.Header());
-        i18n.getHeader().setTitle("My App");
-        i18n.getHeader().setDescription("Login using user/user or admin/admin");
-        i18n.setAdditionalInformation(null);
-        setI18n(i18n);
+        login.setAction("login");
 
-        setForgotPasswordButtonVisible(false);
-        setOpened(true);
+        // Add title
+        H2 title = new H2("SAGE Academic System");
+        title.getStyle().set("margin", "0 0 var(--lumo-space-l) 0");
+        
+        // Create registration link
+        Div registrationDiv = new Div();
+        registrationDiv.setText("Don't have an account? ");
+        RouterLink registerLink = new RouterLink("Register here", RegistrationView.class);
+        registrationDiv.add(registerLink);
+        registrationDiv.getStyle().set("margin-top", "var(--lumo-space-m)");
+
+        add(
+            title,
+            login,
+            registrationDiv
+        );
     }
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         if (authenticatedUser.get().isPresent()) {
-            // Already logged in
-            setOpened(false);
             event.forwardTo("");
         }
 
-        setError(event.getLocation().getQueryParameters().getParameters().containsKey("error"));
+        login.setError(event.getLocation().getQueryParameters().getParameters().containsKey("error"));
     }
 }
