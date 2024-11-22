@@ -14,6 +14,8 @@ import com.vaadin.flow.component.html.Header;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.SvgIcon;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
@@ -83,41 +85,48 @@ public class MainLayout extends AppLayout {
     }
 
     private SideNav createNavigation() {
-        SideNav nav = new SideNav();
+    SideNav nav = new SideNav();
 
-        // Get user type to show appropriate navigation items
-        Optional<User> userOptional = authenticatedUser.get();
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            
-            // Add common navigation items
-            nav.addItem(new SideNavItem("Dashboard", 
-                    user.getUserType().toString().toLowerCase() + "/dashboard",
-                    new Icon("lumo", "dashboard")));
-            
-            // Add role-specific navigation items
-            switch (user.getUserType()) {
-                case STUDENT:
-                    nav.addItem(new SideNavItem("Assignments", "student/assignments"));
-                    nav.addItem(new SideNavItem("Grades", "student/grades"));
-                    break;
-                case LECTURER:
-                    nav.addItem(new SideNavItem("Create Assignment", "lecturer/create-assignment"));
-                    nav.addItem(new SideNavItem("Grade Submissions", "lecturer/grade"));
-                    break;
-                case ADMIN:
-                    nav.addItem(new SideNavItem("Users", "admin/users"));
-                    nav.addItem(new SideNavItem("Settings", "admin/settings"));
-                    break;
-            }
-            
-            // Add profile navigation item for all users
-            nav.addItem(new SideNavItem("Profile", "profile"));
-        }
-
-        return nav;
+    Optional<User> userOptional = authenticatedUser.get();
+    if (userOptional.isPresent()) {
+        User user = userOptional.get();
+        
+        // Add common navigation items
+        nav.addItem(new SideNavItem("Dashboard", 
+                user.getUserType().toString().toLowerCase(),
+                new Icon("lumo", "dashboard")));
+        
+        // Add role-specific navigation items
+        switch (user.getUserType()) {
+    case STUDENT:
+        nav.addItem(new SideNavItem("Assignments", "student/assignments",
+            new Icon(VaadinIcon.TASKS)));
+        nav.addItem(new SideNavItem("Grades", "student/grades",
+            new Icon(VaadinIcon.CHART)));
+        break;
+        
+    case LECTURER:
+        nav.addItem(new SideNavItem("Create Assignment", "lecturer/create-assignment",
+            new Icon(VaadinIcon.PLUS_CIRCLE)));
+        nav.addItem(new SideNavItem("Grade Submissions", "lecturer/grade",
+            new Icon(VaadinIcon.CHECK_SQUARE)));
+        break;
+        
+    case ADMIN:
+        nav.addItem(new SideNavItem("Users", "admin/users",
+            new Icon(VaadinIcon.USERS)));
+        nav.addItem(new SideNavItem("Settings", "admin/settings",
+            new Icon(VaadinIcon.COG)));
+        break;
+}
+        
+        // Add profile navigation item for all users
+        nav.addItem(new SideNavItem("Profile", "profile",
+            new Icon(VaadinIcon.USER)));  // Changed from .create()
     }
 
+    return nav;
+}
     private Footer createFooter() {
         Footer layout = new Footer();
 

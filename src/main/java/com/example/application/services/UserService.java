@@ -48,9 +48,9 @@ public class UserService {
         // Set roles based on user type
         Set<Role> roles = new HashSet<>();
         if (userType == UserType.STUDENT) {
-            roles.add(Role.ROLE_STUDENT);
+            roles.add(Role.ROLE_STUDENT);  // Using the enum constant
         } else if (userType == UserType.LECTURER) {
-            roles.add(Role.ROLE_LECTURER);
+            roles.add(Role.ROLE_LECTURER);  // Using the enum constant
         }
         user.setRoles(roles);
 

@@ -24,7 +24,7 @@ import jakarta.annotation.security.RolesAllowed;
 
 @Route(value = "lecturer", layout = MainLayout.class)
 @PageTitle("Lecturer Dashboard | SAGE")
-@RolesAllowed("ROLE_LECTURER")
+@RolesAllowed("ROLE_LECTURER") 
 public class LecturerDashboardView extends VerticalLayout {
     
     public LecturerDashboardView(AuthenticatedUser authenticatedUser) {

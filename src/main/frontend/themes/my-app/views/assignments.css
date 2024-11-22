@@ -1,0 +1,60 @@
+.student-assignment-view,
+.create-assignment-view {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--lumo-space-m);
+}
+
+.assignment-card {
+    background-color: var(--lumo-base-color);
+    border-radius: var(--lumo-border-radius);
+    box-shadow: var(--lumo-box-shadow-xs);
+    margin-bottom: var(--lumo-space-m);
+    transition: box-shadow 0.3s ease-in-out;
+    border: 1px solid var(--lumo-contrast-10pct);
+}
+
+.assignment-card:hover {
+    box-shadow: var(--lumo-box-shadow-s);
+}
+
+.assignment-card h3 {
+    margin: 0;
+    color: var(--lumo-primary-text-color);
+    font-weight: 600;
+}
+
+.assignment-card p {
+    color: var(--lumo-secondary-text-color);
+    margin: var(--lumo-space-s) 0;
+}
+
+vaadin-upload {
+    margin-top: var(--lumo-space-m);
+    border: 2px dashed var(--lumo-contrast-20pct);
+    border-radius: var(--lumo-border-radius);
+    padding: var(--lumo-space-s);
+}
+
+vaadin-upload[dragover] {
+    border-color: var(--lumo-primary-color);
+    background: var(--lumo-primary-color-10pct);
+}
+
+.assignment-status {
+    display: inline-block;
+    padding: var(--lumo-space-xs) var(--lumo-space-s);
+    border-radius: var(--lumo-border-radius-s);
+    font-size: var(--lumo-font-size-s);
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: var(--lumo-primary-color-10pct);
+    color: var(--lumo-primary-text-color);
+}
+
+.status-submitted {
+    background-color: var(--lumo-success-color-10pct);
+    color: var(--lumo-success-text-color);
+}

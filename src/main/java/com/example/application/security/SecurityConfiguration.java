@@ -5,6 +5,7 @@ import com.vaadin.flow.spring.security.VaadinWebSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -40,9 +41,11 @@ public class SecurityConfiguration extends VaadinWebSecurity {
         // Public resources
         http.authorizeHttpRequests(authorize -> authorize
             .requestMatchers(
-                new AntPathRequestMatcher("/images/*.png"),
-                new AntPathRequestMatcher("/register/**"),
-                new AntPathRequestMatcher("/line-awesome/**/*.svg")
+                new AntPathRequestMatcher("/images/**"),
+                new AntPathRequestMatcher("/frontend/**"),
+                new AntPathRequestMatcher("/icons/**"),
+                new AntPathRequestMatcher("/line-awesome/**"),
+                new AntPathRequestMatcher("/register/**")
             ).permitAll()
         );
 
@@ -53,12 +56,25 @@ public class SecurityConfiguration extends VaadinWebSecurity {
 
         // Role-based access
         http.authorizeHttpRequests(authorize -> authorize
-            .requestMatchers(new AntPathRequestMatcher("/student/**")).hasRole("STUDENT")
-            .requestMatchers(new AntPathRequestMatcher("/lecturer/**")).hasRole("LECTURER")
-            .requestMatchers(new AntPathRequestMatcher("/admin/**")).hasRole("ADMIN")
+            .requestMatchers(new AntPathRequestMatcher("/student/**")).hasAuthority("ROLE_STUDENT")  // Changed from hasRole to hasAuthority
+            .requestMatchers(new AntPathRequestMatcher("/lecturer/**")).hasAuthority("ROLE_LECTURER")
+            .requestMatchers(new AntPathRequestMatcher("/admin/**")).hasAuthority("ROLE_ADMIN")
         );
 
         super.configure(http);
         setLoginView(http, LoginView.class);
+    }
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        super.configure(web);
+        web.ignoring().requestMatchers(
+            "/images/**",
+            "/frontend/**",
+            "/icons/**",
+            "/register",
+            "/register/**",
+            "/line-awesome/**"
+        );
     }
 }
