@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional
 public class SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
@@ -47,6 +48,7 @@ public class SubmissionService {
         return submissionRepository.save(submission);  // No casting needed now
     }
 
+    @Transactional(readOnly = true)
     public List<Submission> getAssignmentSubmissions(Assignment assignment) {
         return submissionRepository.findByAssignment(assignment);
     }

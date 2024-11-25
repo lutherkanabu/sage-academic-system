@@ -108,7 +108,7 @@ public class MainLayout extends AppLayout {
     case LECTURER:
         nav.addItem(new SideNavItem("Create Assignment", "lecturer/create-assignment",
             new Icon(VaadinIcon.PLUS_CIRCLE)));
-        nav.addItem(new SideNavItem("Grade Submissions", "lecturer/grade",
+        nav.addItem(new SideNavItem("Grade Submissions", "lecturer/grade-submissions",
             new Icon(VaadinIcon.CHECK_SQUARE)));
         break;
         

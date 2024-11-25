@@ -11,6 +11,7 @@ package com.example.application.data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+
 @Entity
 public class Submission extends AbstractEntity {
     
@@ -25,8 +26,9 @@ public class Submission extends AbstractEntity {
     @Column(name = "file_name")
     private String fileName;
     
-    @Column(name = "file_data")
     @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "file_data", columnDefinition = "LONGBLOB", length = 16777215)
     private byte[] fileData;
     
     @Column(name = "submission_date")

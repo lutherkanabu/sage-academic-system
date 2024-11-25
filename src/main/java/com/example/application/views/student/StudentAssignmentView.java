@@ -27,6 +27,8 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 import java.io.InputStream;
 import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 
 @Route(value = "student/assignments", layout = MainLayout.class)
 @PageTitle("Assignments | SAGE")
@@ -69,44 +71,46 @@ public class StudentAssignmentView extends VerticalLayout {
     }
     
     private void createAssignmentCard(Assignment assignment) {
-        VerticalLayout card = new VerticalLayout();
-        card.addClassName("assignment-card");
-        card.setSpacing(false);
-        card.setPadding(true);
-        
-        H3 title = new H3(assignment.getFormattedTitle());
-        Paragraph description = new Paragraph(assignment.getDescription());
-        
-        // File upload component
-        MemoryBuffer buffer = new MemoryBuffer();
-        Upload upload = new Upload(buffer);
-        upload.setAcceptedFileTypes("application/pdf", "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-            
-        upload.addSucceededListener(event -> {
-            try {
-                String fileName = event.getFileName();
-                InputStream inputStream = buffer.getInputStream();
-                byte[] fileData = inputStream.readAllBytes();
-                
-                submissionService.submitAssignment(
-                    assignment.getId(),
-                    fileName,
-                    fileData,
-                    authenticatedUser.get().orElseThrow()
-                );
-                
-                Notification.show("Assignment submitted successfully!")
-                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    
-                refreshAssignments();
-            } catch (Exception e) {
-                Notification.show("Error submitting assignment: " + e.getMessage())
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
-        });
-        
-        card.add(title, description, upload);
-        add(card);
-    }
+   VerticalLayout card = new VerticalLayout();
+   card.setSpacing(false);
+   card.setPadding(true);
+   
+   H3 title = new H3(assignment.getFormattedTitle());
+   Paragraph description = new Paragraph(assignment.getDescription());
+   
+   Upload upload = new Upload();
+   upload.setAutoUpload(true);
+   upload.setDropAllowed(false);
+   upload.setMaxFiles(1);
+   upload.setAcceptedFileTypes("application/pdf", "application/msword", 
+       "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+   
+   upload.setReceiver((filename, mimeType) -> new ByteArrayOutputStream());
+   
+   upload.addSucceededListener(event -> {
+       ByteArrayOutputStream bos = (ByteArrayOutputStream) upload.getReceiver()
+           .receiveUpload(event.getFileName(), event.getMIMEType());
+       byte[] data = bos.toByteArray();
+       
+       try {
+           submissionService.submitAssignment(
+               assignment.getId(),
+               event.getFileName(),
+               data,
+               authenticatedUser.get().orElseThrow()
+           );
+           
+           Notification.show("Assignment submitted successfully!")
+               .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+           
+           refreshAssignments();
+       } catch (Exception e) {
+           Notification.show("Error submitting assignment: " + e.getMessage())
+               .addThemeVariants(NotificationVariant.LUMO_ERROR);
+       }
+   });
+   
+   card.add(title, description, upload);
+   add(card);
+}
 }
