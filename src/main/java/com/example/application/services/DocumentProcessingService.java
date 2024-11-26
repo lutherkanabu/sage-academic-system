@@ -5,16 +5,24 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.example.application.data.*;
 
 @Service
 public class DocumentProcessingService {
     private static final Logger logger = LoggerFactory.getLogger(DocumentProcessingService.class);
+    private final SubmissionRepository submissionRepository;
 
+    public DocumentProcessingService(SubmissionRepository submissionRepository) {
+        this.submissionRepository = submissionRepository;
+    }
+
+    // Extraction methods
     public String extractText(byte[] fileData, String fileName) throws Exception {
         validateInput(fileData, fileName);
         logger.debug("Processing file: {}, size: {} bytes", fileName, fileData.length);
@@ -81,33 +89,45 @@ public class DocumentProcessingService {
         }
     }
 
-    // Basic similarity detection - will be enhanced in next phase
-    public Map<String, Object> analyzeSimilarity(String text, List<String> otherTexts) {
+    // Enhanced similarity detection
+    @Transactional(readOnly = true)
+    public Map<String, Object> analyzeSimilarity(String text, Assignment assignment) {
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("Input text cannot be empty");
         }
-        
+
         Map<String, Object> results = new HashMap<>();
-        double maxSimilarity = 0;
-        String mostSimilarText = null;
+        List<Map<String, Object>> matches = new ArrayList<>();
+        double highestSimilarity = 0.0;
+
+        // Get all other submissions for this assignment
+        List<Submission> otherSubmissions = submissionRepository.findByAssignment(assignment);
         
-        if (otherTexts != null && !otherTexts.isEmpty()) {
-            for (String otherText : otherTexts) {
-                if (otherText != null && !otherText.trim().isEmpty()) {
-                    double similarity = calculateSimilarity(text, otherText);
-                    if (similarity > maxSimilarity) {
-                        maxSimilarity = similarity;
-                        mostSimilarText = otherText;
-                    }
+        for (Submission submission : otherSubmissions) {
+            try {
+                String otherText = extractText(submission.getFileData(), submission.getFileName());
+                double similarity = calculateSimilarity(text, otherText);
+                
+                if (similarity > 0.3) { // Only track significant matches
+                    Map<String, Object> match = new HashMap<>();
+                    match.put("studentName", submission.getStudent().getUser().getFirstName() + 
+                                           " " + submission.getStudent().getUser().getLastName());
+                    match.put("similarityScore", similarity);
+                    matches.add(match);
+                    
+                    highestSimilarity = Math.max(highestSimilarity, similarity);
                 }
+            } catch (Exception e) {
+                logger.error("Error processing submission for similarity check: ", e);
             }
         }
+
+        results.put("similarity_score", highestSimilarity);
+        results.put("is_potential_plagiarism", highestSimilarity > 0.8);
+        results.put("similarity_percentage", String.format("%.2f%%", highestSimilarity * 100));
+        results.put("matches", matches);
         
-        results.put("similarity_score", maxSimilarity);
-        results.put("is_potential_plagiarism", maxSimilarity > 0.8);
-        results.put("similarity_percentage", String.format("%.2f%%", maxSimilarity * 100));
-        
-        logger.debug("Similarity analysis complete. Score: {}", maxSimilarity);
+        logger.info("Similarity analysis complete. Highest score: {}", highestSimilarity);
         return results;
     }
 
@@ -115,21 +135,34 @@ public class DocumentProcessingService {
         if (text1 == null || text2 == null) {
             return 0.0;
         }
-        
-        // Convert to word sets for comparison
-        Set<String> set1 = new HashSet<>(Arrays.asList(text1.toLowerCase().split("\\W+")));
-        Set<String> set2 = new HashSet<>(Arrays.asList(text2.toLowerCase().split("\\W+")));
-        
-        if (set1.isEmpty() || set2.isEmpty()) {
-            return 0.0;
+
+        // Normalize texts
+        text1 = text1.toLowerCase().replaceAll("\\s+", " ").trim();
+        text2 = text2.toLowerCase().replaceAll("\\s+", " ").trim();
+
+        // Split into words
+        String[] words1 = text1.split("\\s+");
+        String[] words2 = text2.split("\\s+");
+
+        // Create sets of 3-word sequences (trigrams)
+        Set<String> trigrams1 = new HashSet<>();
+        Set<String> trigrams2 = new HashSet<>();
+
+        for (int i = 0; i < words1.length - 2; i++) {
+            trigrams1.add(words1[i] + " " + words1[i + 1] + " " + words1[i + 2]);
         }
         
-        Set<String> intersection = new HashSet<>(set1);
-        intersection.retainAll(set2);
+        for (int i = 0; i < words2.length - 2; i++) {
+            trigrams2.add(words2[i] + " " + words2[i + 1] + " " + words2[i + 2]);
+        }
+
+        // Calculate Jaccard similarity coefficient
+        Set<String> union = new HashSet<>(trigrams1);
+        union.addAll(trigrams2);
         
-        Set<String> union = new HashSet<>(set1);
-        union.addAll(set2);
-        
-        return (double) intersection.size() / union.size();
+        Set<String> intersection = new HashSet<>(trigrams1);
+        intersection.retainAll(trigrams2);
+
+        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
     }
 }
