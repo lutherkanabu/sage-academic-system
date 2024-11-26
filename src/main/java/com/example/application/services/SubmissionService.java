@@ -12,10 +12,13 @@ import com.example.application.data.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
-@Transactional
 public class SubmissionService {
+    private static final Logger logger = LoggerFactory.getLogger(SubmissionService.class);
+    
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
     private final AssignmentRepository assignmentRepository;
@@ -31,6 +34,14 @@ public class SubmissionService {
     @Transactional
     public Submission submitAssignment(Long assignmentId, String fileName, 
                                      byte[] fileData, User student) {
+        if (fileData == null || fileData.length == 0) {
+            logger.error("Attempted to submit empty file data");
+            throw new IllegalArgumentException("File data cannot be empty");
+        }
+        
+        logger.info("Processing submission for assignment {} by student {}, file size: {} bytes", 
+                   assignmentId, student.getUsername(), fileData.length);
+
         Student studentDetails = studentRepository.findByUser(student);
         Assignment assignment = assignmentRepository.findById(assignmentId)
             .orElseThrow(() -> new RuntimeException("Assignment not found"));
@@ -45,11 +56,23 @@ public class SubmissionService {
         submission.setFileName(fileName);
         submission.setFileData(fileData);
 
-        return submissionRepository.save(submission);  // No casting needed now
+        logger.info("Saving submission to database...");
+        submission = submissionRepository.save(submission);
+        logger.info("Submission saved successfully with ID: {}", submission.getId());
+
+        return submission;
     }
 
     @Transactional(readOnly = true)
     public List<Submission> getAssignmentSubmissions(Assignment assignment) {
+        logger.info("Fetching submissions for assignment ID: {}", assignment.getId());
         return submissionRepository.findByAssignment(assignment);
+    }
+    
+    @Transactional(readOnly = true)
+    public Submission getSubmissionById(Long submissionId) {
+        logger.info("Fetching submission by ID: {}", submissionId);
+        return submissionRepository.findByIdWithDetails(submissionId)
+            .orElseThrow(() -> new RuntimeException("Submission not found"));
     }
 }

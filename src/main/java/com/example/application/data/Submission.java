@@ -10,7 +10,7 @@ package com.example.application.data;
  */
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
+import org.hibernate.annotations.Type;
 
 @Entity
 public class Submission extends AbstractEntity {
@@ -28,7 +28,7 @@ public class Submission extends AbstractEntity {
     
     @Lob
     @Basic(fetch = FetchType.LAZY)
-    @Column(name = "file_data", columnDefinition = "LONGBLOB", length = 16777215)
+    @Column(name = "file_data", columnDefinition = "LONGBLOB")
     private byte[] fileData;
     
     @Column(name = "submission_date")
