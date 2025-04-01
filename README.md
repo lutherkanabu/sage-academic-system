@@ -1,6 +1,6 @@
 # SAGE
 
-Sage Academic System is an AI-powered academic grading platform that automates assessment workflows for educational institutions. Built with Java, Spring Boot, and Vaadin, it provides a seamless experience for instructors to grade assignments and detect potential plagiarism.
+Sage is an AI-powered academic grading platform that automates assessment workflows for educational institutions. Built with Java, Spring Boot, and Vaadin, it provides a seamless experience for instructors to grade assignments and detect potential plagiarism.
 
 ## Key Features
 - `AI-Powered Grading:` Utilizes Google's Vertex AI to evaluate and score academic submissions
