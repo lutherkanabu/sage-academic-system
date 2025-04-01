@@ -1,7 +1,10 @@
 # SAGE
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+Sage Academic System is an AI-powered academic grading platform that automates assessment workflows for educational institutions. Built with Java, Spring Boot, and Vaadin, it provides a seamless experience for instructors to grade assignments and detect potential plagiarism.
+
+## Key Features
+- `AI-Powered Grading:` Utilizes Google's Vertex AI to evaluate and score academic submissions
+- `Plagiarism Detection:` Implements similarity algorithms to identify potentially plagiarized content
 
 ## Running the application
 
