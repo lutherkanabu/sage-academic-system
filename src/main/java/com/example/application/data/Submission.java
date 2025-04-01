@@ -34,7 +34,17 @@ public class Submission extends AbstractEntity {
     @Column(name = "submission_date")
     private LocalDateTime submissionDate = LocalDateTime.now();
     
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
+    
     // Getters and setters
+    public String getExtractedText() {
+        return extractedText;
+    }
+    
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
+    }
     public Assignment getAssignment() {
         return assignment;
     }

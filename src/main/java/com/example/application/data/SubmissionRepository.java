@@ -15,12 +15,22 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
+    // Original method for listing submissions
     @Query("SELECT DISTINCT s FROM Submission s " +
            "JOIN FETCH s.student st " +
            "JOIN FETCH st.user " +
            "JOIN FETCH s.assignment " +
            "WHERE s.assignment = :assignment")
     List<Submission> findByAssignment(@Param("assignment") Assignment assignment);
+    
+    // New method for similarity checking (excludes specific submission)
+    @Query("SELECT DISTINCT s FROM Submission s " +
+           "JOIN FETCH s.student st " +
+           "JOIN FETCH st.user " +
+           "JOIN FETCH s.assignment " +
+           "WHERE s.assignment = :assignment AND s.id != :excludeId")
+    List<Submission> findByAssignmentAndIdNot(@Param("assignment") Assignment assignment, 
+                                             @Param("excludeId") Long excludeId);
     
     @Query("SELECT s FROM Submission s " +
            "JOIN FETCH s.student st " +

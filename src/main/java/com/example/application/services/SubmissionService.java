@@ -22,13 +22,16 @@ public class SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
     private final AssignmentRepository assignmentRepository;
+    private final DocumentProcessingService documentProcessingService; 
 
     public SubmissionService(SubmissionRepository submissionRepository,
                            StudentRepository studentRepository,
-                           AssignmentRepository assignmentRepository) {
+                           AssignmentRepository assignmentRepository,
+                           DocumentProcessingService documentProcessingService) {
         this.submissionRepository = submissionRepository;
         this.studentRepository = studentRepository;
         this.assignmentRepository = assignmentRepository;
+        this.documentProcessingService = documentProcessingService;
     }
 
     @Transactional
@@ -39,8 +42,8 @@ public class SubmissionService {
             throw new IllegalArgumentException("File data cannot be empty");
         }
         
-        logger.info("Processing submission for assignment {} by student {}, file size: {} bytes", 
-                   assignmentId, student.getUsername(), fileData.length);
+        logger.info("Processing submission for assignment {} by student {}", 
+                   assignmentId, student.getUsername());
 
         Student studentDetails = studentRepository.findByUser(student);
         Assignment assignment = assignmentRepository.findById(assignmentId)
@@ -55,6 +58,15 @@ public class SubmissionService {
         submission.setStudent(studentDetails);
         submission.setFileName(fileName);
         submission.setFileData(fileData);
+
+        try {
+            // Extract and store text during submission
+            String extractedText = documentProcessingService.extractText(fileData, fileName);
+            submission.setExtractedText(extractedText);
+        } catch (Exception e) {
+            logger.error("Failed to extract text from submission: {}", e.getMessage());
+            throw new RuntimeException("Failed to process submission: " + e.getMessage());
+        }
 
         logger.info("Saving submission to database...");
         submission = submissionRepository.save(submission);

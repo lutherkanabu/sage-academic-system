@@ -2,8 +2,10 @@ package com.example.application.views.lecturer;
 
 import com.example.application.data.*;
 import com.example.application.security.AuthenticatedUser;
+import com.example.application.services.AIGradingService;
 import com.example.application.services.AssignmentService;
 import com.example.application.services.DocumentProcessingService;
+import com.example.application.services.GradeService;
 import com.example.application.services.SubmissionService;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
@@ -34,15 +36,23 @@ public class GradeSubmissionsView extends VerticalLayout {
     private final SubmissionService submissionService;
     private final AuthenticatedUser authenticatedUser;
     private final DocumentProcessingService documentProcessingService;
-
+    private final AIGradingService aiGradingService;
+    private final GradeService gradeService; 
+    private final GradeRepository gradeRepository;
+    
     public GradeSubmissionsView(AssignmentService assignmentService,
-                              SubmissionService submissionService,
-                              AuthenticatedUser authenticatedUser,
-                              DocumentProcessingService documentProcessingService) {
+                          SubmissionService submissionService,
+                          AuthenticatedUser authenticatedUser,
+                          DocumentProcessingService documentProcessingService,
+                          AIGradingService aiGradingService, GradeService gradeService,
+                          GradeRepository gradeRepository) {
+        this.aiGradingService = aiGradingService;
         this.assignmentService = assignmentService;
         this.submissionService = submissionService;
         this.authenticatedUser = authenticatedUser;
         this.documentProcessingService = documentProcessingService;
+        this.gradeService = gradeService;
+        this.gradeRepository = gradeRepository;
 
         setupLayout();
         setupAssignmentSelect();
@@ -120,20 +130,15 @@ public class GradeSubmissionsView extends VerticalLayout {
    @Transactional(readOnly = true)
     private void viewSubmission(Submission submission) {
         try {
-            // Use the enhanced repository method to fetch the submission with all its associations
             Submission refreshedSubmission = submissionService.getSubmissionById(submission.getId());
             
-            if (refreshedSubmission.getFileData() == null || refreshedSubmission.getFileData().length == 0) {
-                logger.error("File data is empty for submission ID: {}", submission.getId());
-                Notification.show("Error: The submission file appears to be empty or corrupted")
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                return;
-            }
-            
-            logger.info("Opening submission dialog for submission ID: {}, file size: {} bytes", 
-                       submission.getId(), refreshedSubmission.getFileData().length);
-            
-            SubmissionDialog dialog = new SubmissionDialog(refreshedSubmission, documentProcessingService);
+            SubmissionDialog dialog = new SubmissionDialog(
+                refreshedSubmission, 
+                documentProcessingService, 
+                aiGradingService,
+                gradeService,
+                gradeRepository  // Pass gradeRepository to dialog
+            );
             dialog.open();
         } catch (Exception e) {
             logger.error("Error viewing submission: ", e);

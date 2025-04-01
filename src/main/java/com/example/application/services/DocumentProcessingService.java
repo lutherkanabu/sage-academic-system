@@ -16,25 +16,90 @@ import com.example.application.data.*;
 @Service
 public class DocumentProcessingService {
     private static final Logger logger = LoggerFactory.getLogger(DocumentProcessingService.class);
+    private static final double SIMILARITY_THRESHOLD = 0.7;
+    
     private final SubmissionRepository submissionRepository;
+    private final JaccardSimilarityService jaccardService;
 
-    public DocumentProcessingService(SubmissionRepository submissionRepository) {
+    public DocumentProcessingService(SubmissionRepository submissionRepository,
+                                   JaccardSimilarityService jaccardService) {
         this.submissionRepository = submissionRepository;
+        this.jaccardService = jaccardService;
     }
 
-    // Extraction methods
+    @Transactional(readOnly = true)
+    public Map<String, Object> analyzeSimilarity(String currentText, Assignment assignment, Long currentSubmissionId) {
+    logger.info("Starting Jaccard similarity analysis for assignment: {}", assignment.getId());
+    Map<String, Object> results = new HashMap<>();
+    List<Map<String, Object>> matches = new ArrayList<>();
+    double highestSimilarity = 0.0;
+
+    // Get other submissions excluding current submission
+    List<Submission> otherSubmissions = submissionRepository.findByAssignmentAndIdNot(assignment, currentSubmissionId);
+    
+    for (Submission submission : otherSubmissions) {
+        try {
+            String otherText = submission.getExtractedText();
+            if (otherText == null || otherText.trim().isEmpty()) {
+                continue;
+            }
+
+            double similarity = jaccardService.calculateJaccardSimilarity(currentText, otherText);
+
+            if (similarity > SIMILARITY_THRESHOLD) {
+                Map<String, Object> match = new HashMap<>();
+                match.put("studentName", submission.getStudent().getUser().getFirstName() + 
+                        " " + submission.getStudent().getUser().getLastName());
+                match.put("similarityScore", String.format("%.4f", similarity));
+                match.put("submissionId", submission.getId());
+                
+                if (similarity > 0.9) {
+                    match.put("warning", "Very high similarity detected - potential direct copy");
+                }
+                
+                matches.add(match);
+                highestSimilarity = Math.max(highestSimilarity, similarity);
+            }
+        } catch (Exception e) {
+            logger.error("Error processing submission for similarity check: ", e);
+        }
+    }
+
+    results.put("similarity_score", highestSimilarity);
+    results.put("is_potential_plagiarism", highestSimilarity > 0.9);
+    results.put("similarity_percentage", String.format("%.2f%%", highestSimilarity * 100));
+    results.put("matches", matches);
+    results.put("total_submissions_checked", otherSubmissions.size());
+    
+    logger.info("Completed similarity analysis. Highest similarity: {}", highestSimilarity);
+    return results;
+}
+
     public String extractText(byte[] fileData, String fileName) throws Exception {
         validateInput(fileData, fileName);
         logger.debug("Processing file: {}, size: {} bytes", fileName, fileData.length);
         
         try {
+            String extractedText;
             if (fileName.toLowerCase().endsWith(".pdf")) {
-                return extractPdfText(fileData);
+                extractedText = extractPdfText(fileData);
             } else if (fileName.toLowerCase().endsWith(".docx")) {
-                return extractDocxText(fileData);
+                extractedText = extractDocxText(fileData);
             } else {
                 throw new IllegalArgumentException("Unsupported file format. Only PDF and DOCX are supported.");
             }
+
+            if (extractedText == null || extractedText.trim().isEmpty()) {
+                throw new IOException("No text content could be extracted from document");
+            }
+            
+            extractedText = extractedText.trim()
+                                      .replaceAll("\\s+", " ")
+                                      .replaceAll("\\p{C}", "");
+            
+            logger.debug("Successfully extracted {} characters", extractedText.length());
+            return extractedText;
+
         } catch (Exception e) {
             logger.error("Error processing document: {}", e.getMessage());
             throw new Exception("Error processing document: " + e.getMessage());
@@ -88,81 +153,17 @@ public class DocumentProcessingService {
             throw new IOException("Failed to process Word document: " + e.getMessage(), e);
         }
     }
-
-    // Enhanced similarity detection
-    @Transactional(readOnly = true)
-    public Map<String, Object> analyzeSimilarity(String text, Assignment assignment) {
-        if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Input text cannot be empty");
+    
+    @Transactional
+    public void processSubmission(Submission submission) throws Exception {
+        try {
+            String extractedText = extractText(submission.getFileData(), submission.getFileName());
+            submission.setExtractedText(extractedText);
+            submissionRepository.save(submission);
+            logger.info("Successfully processed and stored text for submission ID: {}", submission.getId());
+        } catch (Exception e) {
+            logger.error("Failed to process submission: {}", e.getMessage());
+            throw e;
         }
-
-        Map<String, Object> results = new HashMap<>();
-        List<Map<String, Object>> matches = new ArrayList<>();
-        double highestSimilarity = 0.0;
-
-        // Get all other submissions for this assignment
-        List<Submission> otherSubmissions = submissionRepository.findByAssignment(assignment);
-        
-        for (Submission submission : otherSubmissions) {
-            try {
-                String otherText = extractText(submission.getFileData(), submission.getFileName());
-                double similarity = calculateSimilarity(text, otherText);
-                
-                if (similarity > 0.3) { // Only track significant matches
-                    Map<String, Object> match = new HashMap<>();
-                    match.put("studentName", submission.getStudent().getUser().getFirstName() + 
-                                           " " + submission.getStudent().getUser().getLastName());
-                    match.put("similarityScore", similarity);
-                    matches.add(match);
-                    
-                    highestSimilarity = Math.max(highestSimilarity, similarity);
-                }
-            } catch (Exception e) {
-                logger.error("Error processing submission for similarity check: ", e);
-            }
-        }
-
-        results.put("similarity_score", highestSimilarity);
-        results.put("is_potential_plagiarism", highestSimilarity > 0.8);
-        results.put("similarity_percentage", String.format("%.2f%%", highestSimilarity * 100));
-        results.put("matches", matches);
-        
-        logger.info("Similarity analysis complete. Highest score: {}", highestSimilarity);
-        return results;
-    }
-
-    private double calculateSimilarity(String text1, String text2) {
-        if (text1 == null || text2 == null) {
-            return 0.0;
-        }
-
-        // Normalize texts
-        text1 = text1.toLowerCase().replaceAll("\\s+", " ").trim();
-        text2 = text2.toLowerCase().replaceAll("\\s+", " ").trim();
-
-        // Split into words
-        String[] words1 = text1.split("\\s+");
-        String[] words2 = text2.split("\\s+");
-
-        // Create sets of 3-word sequences (trigrams)
-        Set<String> trigrams1 = new HashSet<>();
-        Set<String> trigrams2 = new HashSet<>();
-
-        for (int i = 0; i < words1.length - 2; i++) {
-            trigrams1.add(words1[i] + " " + words1[i + 1] + " " + words1[i + 2]);
-        }
-        
-        for (int i = 0; i < words2.length - 2; i++) {
-            trigrams2.add(words2[i] + " " + words2[i + 1] + " " + words2[i + 2]);
-        }
-
-        // Calculate Jaccard similarity coefficient
-        Set<String> union = new HashSet<>(trigrams1);
-        union.addAll(trigrams2);
-        
-        Set<String> intersection = new HashSet<>(trigrams1);
-        intersection.retainAll(trigrams2);
-
-        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
     }
 }
